@@ -1,5 +1,7 @@
 import re
+import time
 from datetime import datetime
+
 
 import gspread
 import requests
@@ -39,15 +41,28 @@ def page_parse(parse_list):
     yahoo_rating_list = []
     target_price_list = []
     number_analysts_list = []
+    time_list = []
+    count = 0
 
     for stock in parse_list:
+        time_start = time.time()
         stock_page = get_stock_page(stock)
-        yahoo_rating = re.findall(r"\"recommendationMean\":{\"raw\":([\d\.]+)", stock_page)
-        target_price = re.findall(r"\"targetMeanPrice\":{\"raw\":([\d\.]+)", stock_page)
-        number_analysts = re.findall(r"\"numberOfAnalystOpinions\":{\"raw\":([\d\.]+)", stock_page)
-        yahoo_rating_list.append(float(yahoo_rating[0]))
-        target_price_list.append(float(target_price[0]))
-        number_analysts_list.append(int(number_analysts[0]))
+        yahoo_rating = re.findall(r"\"recommendationMean\":{\"raw\":([\d.]+)", stock_page)
+        target_price = re.findall(r"\"targetMeanPrice\":{\"raw\":([\d.]+)", stock_page)
+        number_analysts = re.findall(r"\"numberOfAnalystOpinions\":{\"raw\":([\d.]+)", stock_page)
+        yahoo_rating_list.append([float(yahoo_rating[0])])
+        target_price_list.append([float(target_price[0])])
+        number_analysts_list.append([int(number_analysts[0])])
+        time_end = time.time()
+
+        # Print Status #
+        count += 1
+        if len(time_list) > 5:
+            time_list.pop(0)
+        time_list.append(time_end - time_start)
+        h, m, s = convertmillis(sum(time_list) / len(time_list) * (len(stock_list) - count))
+        print(f'Completed: {count} of {len(parse_list)} - {stock} ({round(count / len(parse_list) * 100, 2)}%)')
+        print(f'Time left: {h}, {m}, {s}')
 
     return yahoo_rating_list, target_price_list, number_analysts_list
 
@@ -67,6 +82,13 @@ def put_data_gsheet(parse_list, col_name, sheet):
     sheet.update(f'{col_address[0]}{int(col_address[1]) + 1}:{col_address[0]}9999', parse_list)
 
 
+def convertmillis(millis):
+    seconds = int(millis % 60)
+    minutes = int((millis/60) % 60)
+    hours = int((millis/60 * 60) % 24)
+    return hours, minutes, seconds
+
+
 gsheet = gspread_file('creds.json', 'PythonTest')
 stock_list = get_stock_list(gsheet)
 new_yahoo_rating, new_target_price, new_number_analysts = page_parse(stock_list)
@@ -74,6 +96,9 @@ new_yahoo_rating, new_target_price, new_number_analysts = page_parse(stock_list)
 put_data_gsheet(new_yahoo_rating, 'Rating', gsheet)
 put_data_gsheet(new_target_price, 'Target Price', gsheet)
 put_data_gsheet(new_number_analysts, 'Number of Analysts', gsheet)
+
+status(gsheet, "Updated:", True)
+
 """
     status(gsheet, "Updated:", True)
 except:
