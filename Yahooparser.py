@@ -62,7 +62,7 @@ def page_parse(parse_list):
         time_list.append(time_end - time_start)
         h, m, s = convertmillis(sum(time_list) / len(time_list) * (len(stock_list) - count))
         print(f'Completed: {count} of {len(parse_list)} - {stock} ({round(count / len(parse_list) * 100, 2)}%)')
-        print(f'Time left: {h}, {m}, {s}')
+        print(f'Time left: {h} hours, {m} minutes, {s} seconds \n')
 
     return yahoo_rating_list, target_price_list, number_analysts_list
 
@@ -84,8 +84,8 @@ def put_data_gsheet(parse_list, col_name, sheet):
 
 def convertmillis(millis):
     seconds = int(millis % 60)
-    minutes = int((millis/60) % 60)
-    hours = int((millis/60 * 60) % 24)
+    minutes = int((millis / 60) % 60)
+    hours = int((millis / (60 * 60)) % 24)
     return hours, minutes, seconds
 
 
