@@ -14,8 +14,9 @@ def gspread_file(credential_file, sheet_name):
                                                                    ['https://www.googleapis.com/auth/spreadsheets',
                                                                     'https://www.googleapis.com/auth/drive'])
     file = gspread.authorize(credentials)
-    sheet = file.open(sheet_name).worksheet('Stocks')
-    return sheet
+    stock = file.open(sheet_name).worksheet('Stocks')
+    log = file.open(sheet_name).worksheet('Log')
+    return stock, log
 
 
 def get_stock_list(sheet):
@@ -74,7 +75,6 @@ def page_parse(parse_list):
 
 
 def status(sheet, col_title, completed):
-    now = datetime.now()
     col_address = int(sheet.find(col_title).col)
     row_address = int(sheet.find(col_title).address[1])
     if completed:
@@ -95,18 +95,24 @@ def convertmillis(millis):
     return hours, minutes, seconds
 
 
-gsheet = gspread_file('creds.json', 'PythonTest')
-stock_list = get_stock_list(gsheet)
+def log_changes(sheet, data1, data2, label):
+    for i in range(len(data1)):
+        if float(data1[i].replace(',', '.')) != data2[i][0]:
+            sheet.insert_row([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, data1[i], data2[i][0]], 2)
+
+
+stock_sheet, log_sheet = gspread_file('creds.json', 'PythonTest')
+stock_list = get_stock_list(stock_sheet)
 stock_list['New Ratings'], stock_list['New Targets'], stock_list['New Analysts'] = page_parse(stock_list['Symbol'])
 
-put_data_gsheet(stock_list['New Ratings'], 'Rating', gsheet)
-put_data_gsheet(stock_list['New Targets'], 'Target Price', gsheet)
-put_data_gsheet(stock_list['New Analysts'], 'Number of Analysts', gsheet)
+# Update data
+put_data_gsheet(stock_list['New Ratings'], 'Rating', stock_sheet)
+put_data_gsheet(stock_list['New Targets'], 'Target Price', stock_sheet)
+put_data_gsheet(stock_list['New Analysts'], 'Number of Analysts', stock_sheet)
 
-status(gsheet, "Updated:", True)
-
-"""
-    status(gsheet, "Updated:", True)
-except:
-    status(gsheet, "Updated:", False)
-"""
+# Log updates
+now = datetime.now()
+status(stock_sheet, "Updated:", True)
+log_changes(log_sheet, stock_list['Rating'], stock_list['New Ratings'], 'Rating')
+log_changes(log_sheet, stock_list['Target Price'], stock_list['New Targets'], 'Target Price')
+log_changes(log_sheet, stock_list['Number of Analysts'], stock_list['New Analysts'], 'Number of Analysts')
