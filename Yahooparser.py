@@ -20,9 +20,10 @@ def gspread_file(credential_file, sheet_name):
 
 def get_stock_list(sheet):
     # Get stock list from gspread
-    symbol_address = sheet.find('Symbol').col
-    stocks = sheet.col_values(symbol_address)[1:]
-    return stocks
+    result = {}
+    for name in ['Symbol', 'Rating', 'Target Price', 'Number of Analysts']:
+        result[name] = sheet.col_values(sheet.find(name).col)[1:]
+    return result
 
 
 def get_stock_page(stock_symbol):
@@ -60,9 +61,14 @@ def page_parse(parse_list):
         if len(time_list) > 5:
             time_list.pop(0)
         time_list.append(time_end - time_start)
-        h, m, s = convertmillis(sum(time_list) / len(time_list) * (len(stock_list) - count))
+        h, m, s = convertmillis(sum(time_list) / len(time_list) * (len(stock_list['Symbol']) - count))
         print(f'Completed: {count} of {len(parse_list)} - {stock} ({round(count / len(parse_list) * 100, 2)}%)')
-        print(f'Time left: {h} hours, {m} minutes, {s} seconds \n')
+        print('Time left:', end='')
+        if h > 0:
+            print(f' {h} hours,', end='')
+        if m > 0:
+            print(f' {m} minutes,', end='')
+        print(f' {s} seconds \n')
 
     return yahoo_rating_list, target_price_list, number_analysts_list
 
@@ -91,11 +97,11 @@ def convertmillis(millis):
 
 gsheet = gspread_file('creds.json', 'PythonTest')
 stock_list = get_stock_list(gsheet)
-new_yahoo_rating, new_target_price, new_number_analysts = page_parse(stock_list)
+stock_list['New Ratings'], stock_list['New Targets'], stock_list['New Analysts'] = page_parse(stock_list['Symbol'])
 
-put_data_gsheet(new_yahoo_rating, 'Rating', gsheet)
-put_data_gsheet(new_target_price, 'Target Price', gsheet)
-put_data_gsheet(new_number_analysts, 'Number of Analysts', gsheet)
+put_data_gsheet(stock_list['New Ratings'], 'Rating', gsheet)
+put_data_gsheet(stock_list['New Targets'], 'Target Price', gsheet)
+put_data_gsheet(stock_list['New Analysts'], 'Number of Analysts', gsheet)
 
 status(gsheet, "Updated:", True)
 
