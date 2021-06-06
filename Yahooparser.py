@@ -20,7 +20,7 @@ def gspread_file(credential_file, sheet_name):
 
 
 def get_stock_list(sheet):
-    # Get stock list from gspread
+    # Get data list from gspread
     result = {}
 
     for name in ['Symbol', 'Rating', 'Target Price', 'Number of Analysts']:
@@ -101,7 +101,7 @@ def convertmillis(millis):
     return hours, minutes, seconds
 
 
-def log_changes(sheet, data1, data2, label):
+def log_changes(data1, data2, label):
     result = []
     for i in range(len(data1)):
         if not data1[i]:
@@ -109,7 +109,7 @@ def log_changes(sheet, data1, data2, label):
         elif data1[i] != data2[i][0]:
             result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label,
                            data1[i], data2[i][0]])
-    sheet.insert_rows(result, 2)
+    return result
 
 
 # Read data
@@ -126,7 +126,10 @@ put_data_gsheet(stock_list['New Ratings'], 'Rating', stock_sheet)
 # Log updates
 now = datetime.now()
 status(stock_sheet, "Updated:", True)
-log_changes(log_sheet, stock_list['Rating'], stock_list['New Ratings'], 'Rating')
-log_changes(log_sheet, stock_list['Target Price'], stock_list['New Targets'], 'Target Price')
-log_changes(log_sheet, stock_list['Number of Analysts'], stock_list['New Analysts'], 'Number of Analysts')
+
+changes = (log_changes(stock_list['Rating'], stock_list['New Ratings'], 'Rating') +
+           log_changes(stock_list['Target Price'], stock_list['New Targets'], 'Target Price') +
+           log_changes(stock_list['Number of Analysts'], stock_list['New Analysts'], 'Number of Analysts'))
+log_sheet.insert_rows(sorted(changes, key=lambda x: x[1]), 2)
+
 print('Completed!')
