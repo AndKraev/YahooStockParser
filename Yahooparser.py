@@ -111,9 +111,9 @@ stock_list = get_stock_list(stock_sheet)
 stock_list['New Ratings'], stock_list['New Targets'], stock_list['New Analysts'] = page_parse(stock_list['Symbol'])
 
 # Update data
-put_data_gsheet(stock_list['New Ratings'], 'Rating', stock_sheet)
-put_data_gsheet(stock_list['New Targets'], 'Target Price', stock_sheet)
 put_data_gsheet(stock_list['New Analysts'], 'Number of Analysts', stock_sheet)
+put_data_gsheet(stock_list['New Targets'], 'Target Price', stock_sheet)
+put_data_gsheet(stock_list['New Ratings'], 'Rating', stock_sheet)
 
 # Log updates
 now = datetime.now()
