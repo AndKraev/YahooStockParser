@@ -101,7 +101,8 @@ def log_changes(sheet, data1, data2, label):
         if not data1[i]:
             result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, 'First', data2[i][0]])
         elif float(data1[i].replace(',', '.')) != data2[i][0]:
-            result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, data1[i], data2[i][0]])
+            result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label,
+                           float(data1[i].replace(',', '.')), data2[i][0]])
     sheet.insert_rows(result, 2)
 
 
@@ -111,6 +112,7 @@ stock_list = get_stock_list(stock_sheet)
 stock_list['New Ratings'], stock_list['New Targets'], stock_list['New Analysts'] = page_parse(stock_list['Symbol'])
 
 # Update data
+print('Updating google sheet...')
 put_data_gsheet(stock_list['New Analysts'], 'Number of Analysts', stock_sheet)
 put_data_gsheet(stock_list['New Targets'], 'Target Price', stock_sheet)
 put_data_gsheet(stock_list['New Ratings'], 'Rating', stock_sheet)
@@ -121,3 +123,4 @@ status(stock_sheet, "Updated:", True)
 log_changes(log_sheet, stock_list['Rating'], stock_list['New Ratings'], 'Rating')
 log_changes(log_sheet, stock_list['Target Price'], stock_list['New Targets'], 'Target Price')
 log_changes(log_sheet, stock_list['Number of Analysts'], stock_list['New Analysts'], 'Number of Analysts')
+print('Completed!')
