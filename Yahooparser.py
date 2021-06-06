@@ -59,7 +59,7 @@ def page_parse(parse_list):
 
         # Print Status #
         count += 1
-        if len(time_list) > 5:
+        if len(time_list) > 10:
             time_list.pop(0)
         time_list.append(time_end - time_start)
         h, m, s = convertmillis(sum(time_list) / len(time_list) * (len(stock_list['Symbol']) - count))
