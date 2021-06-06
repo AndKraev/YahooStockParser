@@ -96,11 +96,16 @@ def convertmillis(millis):
 
 
 def log_changes(sheet, data1, data2, label):
+    result = []
     for i in range(len(data1)):
-        if float(data1[i].replace(',', '.')) != data2[i][0]:
-            sheet.insert_row([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, data1[i], data2[i][0]], 2)
+        if not data1[i]:
+            result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, 'First', data2[i][0]])
+        elif float(data1[i].replace(',', '.')) != data2[i][0]:
+            result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, data1[i], data2[i][0]])
+    sheet.insert_rows(result, 2)
 
 
+# Read data
 stock_sheet, log_sheet = gspread_file('creds.json', 'PythonTest')
 stock_list = get_stock_list(stock_sheet)
 stock_list['New Ratings'], stock_list['New Targets'], stock_list['New Analysts'] = page_parse(stock_list['Symbol'])
