@@ -22,8 +22,14 @@ def gspread_file(credential_file, sheet_name):
 def get_stock_list(sheet):
     # Get stock list from gspread
     result = {}
+
     for name in ['Symbol', 'Rating', 'Target Price', 'Number of Analysts']:
         result[name] = sheet.col_values(sheet.find(name).col)[1:]
+
+    for key in ['Rating', 'Target Price', 'Number of Analysts']:
+        for ind in range(len(result[key])):
+            result[key][ind] = float(result[key][ind].replace(',', '.').replace('$', ''))
+
     return result
 
 
@@ -100,9 +106,9 @@ def log_changes(sheet, data1, data2, label):
     for i in range(len(data1)):
         if not data1[i]:
             result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, 'First', data2[i][0]])
-        elif float(data1[i].replace(',', '.')) != data2[i][0]:
+        elif data1[i] != data2[i][0]:
             result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label,
-                           float(data1[i].replace(',', '.')), data2[i][0]])
+                           data1[i], data2[i][0]])
     sheet.insert_rows(result, 2)
 
 
