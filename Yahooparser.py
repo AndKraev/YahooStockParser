@@ -24,11 +24,7 @@ def get_stock_list(sheet):
     result = {}
 
     for name in ['Symbol', 'Rating', 'Target Price', 'Number of Analysts']:
-        result[name] = sheet.col_values(sheet.find(name).col)[1:]
-
-    for key in ['Rating', 'Target Price', 'Number of Analysts']:
-        for ind in range(len(result[key])):
-            result[key][ind] = float(result[key][ind].replace(',', '.').replace('$', ''))
+        result[name] = sheet.col_values(sheet.find(name).col, 'UNFORMATTED_VALUE')[1:]
 
     return result
 
