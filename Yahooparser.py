@@ -1,11 +1,16 @@
 import re
 import time
 from datetime import datetime
+import async_timeout
+import asyncio
+import Settings
 
-
+import aiohttp
 import gspread
-import requests
 from oauth2client.service_account import ServiceAccountCredentials
+
+
+start = time.time()
 
 
 def gspread_file(credential_file, sheet_name):
@@ -29,37 +34,36 @@ def get_stock_list(sheet):
     return result
 
 
-def get_stock_page(stock_symbol):
-    # Get yahoo stock page
-    tries = 3
-    yahoo_url = 'https://finance.yahoo.com/quote/' + stock_symbol
-    while tries > 0:
-        stock_page = requests.get(yahoo_url)
-        tries -= 1
-        if stock_page.status_code == 200:
-            return stock_page.text
+async def fetch(session, url):
+    with async_timeout.timeout(10):
+        async with session.get(url) as response:
+            return await response.text()
 
 
-def page_parse(parse_list):
+async def main(loop, urls):
+    async with aiohttp.ClientSession(loop=loop) as session:
+        tasks = [fetch(session, url) for url in urls]
+        results = await asyncio.gather(*tasks)
+        return results
+
+
+def page_parse():
     # Find data on yahoo and create data lists
     yahoo_rating_list = []
     target_price_list = []
     number_analysts_list = []
-    time_list = []
-    count = 0
 
-    for stock in parse_list:
-        time_start = time.time()
-        stock_page = get_stock_page(stock)
-        yahoo_rating = re.findall(r"\"recommendationMean\":{\"raw\":([\d.]+)", stock_page)
-        target_price = re.findall(r"\"targetMeanPrice\":{\"raw\":([\d.]+)", stock_page)
-        number_analysts = re.findall(r"\"numberOfAnalystOpinions\":{\"raw\":([\d.]+)", stock_page)
+    for body in stocks['Body']:
+        # time_start = time.time()
+        yahoo_rating = re.findall(r"\"recommendationMean\":{\"raw\":([\d.]+)", body)
+        target_price = re.findall(r"\"targetMeanPrice\":{\"raw\":([\d.]+)", body)
+        number_analysts = re.findall(r"\"numberOfAnalystOpinions\":{\"raw\":([\d.]+)", body)
         yahoo_rating_list.append([float(yahoo_rating[0])])
         target_price_list.append([float(target_price[0])])
         number_analysts_list.append([int(number_analysts[0])])
-        time_end = time.time()
 
         # Print Status #
+        '''
         count += 1
         if len(time_list) > 10:
             time_list.pop(0)
@@ -72,6 +76,7 @@ def page_parse(parse_list):
         if m > 0:
             print(f' {m} minutes,', end='')
         print(f' {s} seconds \n')
+        '''
 
     return yahoo_rating_list, target_price_list, number_analysts_list
 
@@ -101,31 +106,40 @@ def log_changes(data1, data2, label):
     result = []
     for i in range(len(data1)):
         if not data1[i]:
-            result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label, 'First', data2[i][0]])
+            result.append([str(now.strftime('%d-%m-%Y')), stocks['Symbol'][i], label, 'First', data2[i][0]])
         elif data1[i] != data2[i][0]:
-            result.append([str(now.strftime('%d-%m-%Y')), stock_list['Symbol'][i], label,
+            result.append([str(now.strftime('%d-%m-%Y')), stocks['Symbol'][i], label,
                            data1[i], data2[i][0]])
     return result
 
 
-# Read data
-stock_sheet, log_sheet = gspread_file('creds.json', 'PythonTest')
-stock_list = get_stock_list(stock_sheet)
-stock_list['New Ratings'], stock_list['New Targets'], stock_list['New Analysts'] = page_parse(stock_list['Symbol'])
+# Read data from gsheet
+print('Reading Google sheet file...')
+stock_sheet, log_sheet = gspread_file('creds.json', Settings.gsheet_name)
+stocks = get_stock_list(stock_sheet)
+stocks['URL'] = ['https://finance.yahoo.com/quote/' + stock for stock in stocks['Symbol']]
+
+# Fetch data from Yahoo site
+print('Fetching data from Yahoo...')
+loop = asyncio.get_event_loop()
+stocks['Body'] = loop.run_until_complete(main(loop, stocks['URL']))
+
+stocks['New Ratings'], stocks['New Targets'], stocks['New Analysts'] = page_parse()
 
 # Update data
 print('Updating google sheet...')
-put_data_gsheet(stock_list['New Analysts'], 'Number of Analysts', stock_sheet)
-put_data_gsheet(stock_list['New Targets'], 'Target Price', stock_sheet)
-put_data_gsheet(stock_list['New Ratings'], 'Rating', stock_sheet)
+put_data_gsheet(stocks['New Analysts'], 'Number of Analysts', stock_sheet)
+put_data_gsheet(stocks['New Targets'], 'Target Price', stock_sheet)
+put_data_gsheet(stocks['New Ratings'], 'Rating', stock_sheet)
 
 # Log updates
 now = datetime.now()
 status(stock_sheet, "Updated:", True)
 
-changes = (log_changes(stock_list['Rating'], stock_list['New Ratings'], 'Rating') +
-           log_changes(stock_list['Target Price'], stock_list['New Targets'], 'Target Price') +
-           log_changes(stock_list['Number of Analysts'], stock_list['New Analysts'], 'Number of Analysts'))
+changes = (log_changes(stocks['Rating'], stocks['New Ratings'], 'Rating') +
+           log_changes(stocks['Target Price'], stocks['New Targets'], 'Target Price') +
+           log_changes(stocks['Number of Analysts'], stocks['New Analysts'], 'Number of Analysts'))
 log_sheet.insert_rows(sorted(changes, key=lambda x: x[1]), 2)
 
 print('Completed!')
+print("----%.2f----" % (time.time()-start))
