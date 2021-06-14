@@ -62,22 +62,6 @@ def page_parse():
         target_price_list.append([float(target_price[0])])
         number_analysts_list.append([int(number_analysts[0])])
 
-        # Print Status #
-        '''
-        count += 1
-        if len(time_list) > 10:
-            time_list.pop(0)
-        time_list.append(time_end - time_start)
-        h, m, s = convertmillis(sum(time_list) / len(time_list) * (len(stock_list['Symbol']) - count))
-        print(f'Completed: {count} of {len(parse_list)} - {stock} ({round(count / len(parse_list) * 100, 2)}%)')
-        print('Time left:', end='')
-        if h > 0:
-            print(f' {h} hours,', end='')
-        if m > 0:
-            print(f' {m} minutes,', end='')
-        print(f' {s} seconds \n')
-        '''
-
     return yahoo_rating_list, target_price_list, number_analysts_list
 
 
@@ -93,13 +77,6 @@ def status(sheet, col_title, completed):
 def put_data_gsheet(parse_list, col_name, sheet):
     col_address = sheet.find(col_name).address
     sheet.update(f'{col_address[0]}{int(col_address[1]) + 1}:{col_address[0]}9999', parse_list)
-
-
-def convertmillis(millis):
-    seconds = int(millis % 60)
-    minutes = int((millis / 60) % 60)
-    hours = int((millis / (60 * 60)) % 24)
-    return hours, minutes, seconds
 
 
 def log_changes(data1, data2, label):
@@ -118,6 +95,7 @@ print('Reading Google sheet file...')
 stock_sheet, log_sheet = gspread_file('creds.json', Settings.gsheet_name)
 stocks = get_stock_list(stock_sheet)
 stocks['URL'] = ['https://finance.yahoo.com/quote/' + stock for stock in stocks['Symbol']]
+
 
 # Fetch data from Yahoo site
 print('Fetching data from Yahoo...')
