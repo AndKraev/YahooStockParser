@@ -143,3 +143,4 @@ log_sheet.insert_rows(sorted(changes, key=lambda x: x[1]), 2)
 
 print('Completed!')
 print("----%.2f----" % (time.time()-start))
+time.sleep(3)
